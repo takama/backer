@@ -121,3 +121,54 @@ func TestNewPlayer(t *testing.T) {
 	_, err = New("p4", store)
 	test(t, err == ErrNewPlayer, "Expected", ErrNewPlayer, "got", err)
 }
+
+func TestPlayerFund(t *testing.T) {
+
+	store := &playerBundle{
+		tx:      new(playerTxSuccess),
+		records: make(map[string]model.Player),
+	}
+	entry, err := New("p1", store)
+	test(t, err == nil, "Expected creating a new player, got", err)
+	err = entry.Fund(300)
+	test(t, err == nil, "Expected fund 300 to the player, got", err)
+	points, err := entry.Balance()
+	test(t, err == nil, "Expected check balance of the player, got", err)
+	test(t, points == 300, "Expected 300 points for the player, got", points)
+	store.errTx = ErrFalseTransaction
+	err = entry.Fund(10)
+	test(t, err == ErrFalseTransaction, "Expected", ErrFalseTransaction, "got", err)
+	store.tx = new(playerTxFalse)
+	store.errTx = nil
+	err = entry.Fund(20)
+	test(t, err == ErrFalseCommit, "Expected", ErrFalseCommit, "got", err)
+	store.tx = new(playerTxSuccess)
+	store.errFind = ErrFindPlayer
+	err = entry.Fund(30)
+	test(t, err == ErrFindPlayer, "Expected", ErrFindPlayer, "got", err)
+	store.errFind = nil
+	store.errSave = ErrSavePlayer
+	err = entry.Fund(40)
+	test(t, err == ErrSavePlayer, "Expected", ErrSavePlayer, "got", err)
+}
+
+func TestPlayerBalance(t *testing.T) {
+
+	store := &playerBundle{
+		tx:      new(playerTxSuccess),
+		records: make(map[string]model.Player),
+	}
+	entry, err := New("p4", store)
+	test(t, err == nil, "Expected creating a new player, got", err)
+	balance, err := entry.Balance()
+	test(t, err == nil, "Expected check balance of the player, got", err)
+	test(t, balance == 0, "Expected 0 points for the player, got", balance)
+	err = entry.Fund(50.99)
+	test(t, err == nil, "Expected fund 50.99 to the player, got", err)
+	balance, err = entry.Balance()
+	test(t, err == nil, "Expected check balance of the player, got", err)
+	test(t, balance == 50.99, "Expected 300 points for the player, got", balance)
+	store.errFind = ErrFindPlayer
+	_, err = entry.Balance()
+	test(t, err == ErrFindPlayer, "Expected", ErrFindPlayer, "got", err)
+}

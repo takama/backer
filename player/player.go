@@ -3,6 +3,8 @@ package player
 import (
 	"sync"
 
+	"github.com/takama/backer"
+	"github.com/takama/backer/helper"
 	"github.com/takama/backer/model"
 )
 
@@ -39,4 +41,51 @@ func New(id string, ctrl Controller) (*Entry, error) {
 	}
 
 	return entry, nil
+}
+
+// Fund funds (add to balance) player with amount
+func (entry *Entry) Fund(amount backer.Points) error {
+	tx, err := entry.Controller.Transaction()
+	if err != nil {
+		return err
+	}
+
+	player, err := entry.Controller.FindPlayer(entry.Player.ID, tx)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	player.Balance = backer.Points(
+		helper.RoundPrice(float32(player.Balance) + helper.TruncatePrice(float32(amount))))
+	err = entry.Controller.SavePlayer(player, tx)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	entry.mutex.Lock()
+	defer entry.mutex.Unlock()
+	entry.Player.Balance = player.Balance
+
+	return nil
+}
+
+// Balance gets current points
+func (entry *Entry) Balance() (backer.Points, error) {
+	player, err := entry.Controller.FindPlayer(entry.Player.ID, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	entry.mutex.Lock()
+	defer entry.mutex.Unlock()
+	entry.Player.Balance = player.Balance
+
+	return player.Balance, nil
 }
