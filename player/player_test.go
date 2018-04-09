@@ -152,6 +152,40 @@ func TestPlayerFund(t *testing.T) {
 	test(t, err == ErrSavePlayer, "Expected", ErrSavePlayer, "got", err)
 }
 
+func TestPlayerTake(t *testing.T) {
+
+	store := &playerBundle{
+		tx:      new(playerTxSuccess),
+		records: make(map[string]model.Player),
+	}
+	entry, err := New("p3", store)
+	test(t, err == nil, "Expected creating a new player, got", err)
+	err = entry.Fund(300)
+	test(t, err == nil, "Expected fund 300 to the player, got", err)
+	err = entry.Take(400)
+	test(t, err != nil, "Expected take more than player balance, got success")
+	err = entry.Take(200)
+	test(t, err == nil, "Expected take amount from player balance, got", err)
+	balance, err := entry.Balance()
+	test(t, err == nil, "Expected check balance of the player, got", err)
+	test(t, balance == 100, "Expected 100 points for the player, got", balance)
+	store.errTx = ErrFalseTransaction
+	err = entry.Take(10)
+	test(t, err == ErrFalseTransaction, "Expected", ErrFalseTransaction, "got", err)
+	store.tx = new(playerTxFalse)
+	store.errTx = nil
+	err = entry.Take(20)
+	test(t, err == ErrFalseCommit, "Expected", ErrFalseCommit, "got", err)
+	store.tx = new(playerTxSuccess)
+	store.errFind = ErrFindPlayer
+	err = entry.Take(30)
+	test(t, err == ErrFindPlayer, "Expected", ErrFindPlayer, "got", err)
+	store.errFind = nil
+	store.errSave = ErrSavePlayer
+	err = entry.Take(40)
+	test(t, err == ErrSavePlayer, "Expected", ErrSavePlayer, "got", err)
+}
+
 func TestPlayerBalance(t *testing.T) {
 
 	store := &playerBundle{

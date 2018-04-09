@@ -1,11 +1,17 @@
 package player
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/takama/backer"
 	"github.com/takama/backer/helper"
 	"github.com/takama/backer/model"
+)
+
+var (
+	// ErrInsufficientPoints appears if player has not enough points
+	ErrInsufficientPoints = errors.New("Insufficient points")
 )
 
 // Entry implements Player interface
@@ -58,6 +64,43 @@ func (entry *Entry) Fund(amount backer.Points) error {
 
 	player.Balance = backer.Points(
 		helper.RoundPrice(float32(player.Balance) + helper.TruncatePrice(float32(amount))))
+	err = entry.Controller.SavePlayer(player, tx)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	entry.mutex.Lock()
+	defer entry.mutex.Unlock()
+	entry.Player.Balance = player.Balance
+
+	return nil
+}
+
+// Take takes points from player account
+func (entry *Entry) Take(amount backer.Points) error {
+	tx, err := entry.Controller.Transaction()
+	if err != nil {
+		return err
+	}
+
+	player, err := entry.Controller.FindPlayer(entry.Player.ID, tx)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if player.Balance < amount {
+		return ErrInsufficientPoints
+	}
+
+	player.Balance = backer.Points(
+		helper.RoundPrice(float32(player.Balance) - helper.TruncatePrice(float32(amount))))
 	err = entry.Controller.SavePlayer(player, tx)
 	if err != nil {
 		tx.Rollback()
