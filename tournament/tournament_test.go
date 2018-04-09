@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/takama/backer"
 	"github.com/takama/backer/db"
 	"github.com/takama/backer/model"
 	"github.com/takama/backer/player"
@@ -199,6 +200,10 @@ func TestTournamentAnnounce(t *testing.T) {
 	store.errSave = ErrSaveTournament
 	err = tournament.Announce(500)
 	test(t, err == ErrSaveTournament, "Expected", ErrSaveTournament, "got", err)
+	store.errSave = nil
+	err = tournament.Result(nil)
+	err = tournament.Announce(700)
+	test(t, err == ErrAllreadyFinished, "Expected", ErrAllreadyFinished, "got", err)
 }
 
 func TestTournamentJoin(t *testing.T) {
@@ -267,4 +272,155 @@ func TestTournamentJoin(t *testing.T) {
 	test(t, err == nil, "Expected fund 300 to the player, got", err)
 	err = tournament.Join(playerP2, playerB1, playerB2, playerB3)
 	test(t, err == nil, "Expected join a player, got", err)
+
+	err = tournament.Result(nil)
+	playerP3, err := player.New("p3", playerStore)
+	test(t, err == nil, "Expected creating a new player, got", err)
+	err = tournament.Join(playerP3)
+	test(t, err == ErrAllreadyFinished, "Expected", ErrAllreadyFinished, "got", err)
+}
+
+func TestTournamentResult(t *testing.T) {
+
+	playerStore := &playerBundle{
+		records: make(map[string]model.Player),
+	}
+	playerP1, err := player.New("p1", playerStore)
+	test(t, err == nil, "Expected creating a new player, got", err)
+
+	store := &tournamentBundle{
+		tx:      new(tournamentTxSuccess),
+		records: make(map[uint64]model.Tournament),
+	}
+	tournament, err := New(1, store)
+	test(t, err == nil, "Expected creating a new tournament, got", err)
+	err = tournament.Announce(1000)
+	test(t, err == nil, "Expected announce of the tournament, got", err)
+
+	err = playerP1.Fund(1000)
+	test(t, err == nil, "Expected fund 1000 to the player, got", err)
+	err = tournament.Join(playerP1)
+	test(t, err == nil, "Expected join a player, got", err)
+
+	playerP2, err := player.New("p2", playerStore)
+	test(t, err == nil, "Expected creating a new player, got", err)
+	playerB1, err := player.New("b1", playerStore)
+	test(t, err == nil, "Expected creating a new player, got", err)
+	playerB2, err := player.New("b2", playerStore)
+	test(t, err == nil, "Expected creating a new player, got", err)
+	playerB3, err := player.New("b3", playerStore)
+	test(t, err == nil, "Expected creating a new player, got", err)
+	err = playerP2.Fund(500)
+	test(t, err == nil, "Expected fund 500 to the player, got", err)
+	err = playerB1.Fund(300)
+	test(t, err == nil, "Expected fund 300 to the player, got", err)
+	err = playerB2.Fund(300)
+	test(t, err == nil, "Expected fund 300 to the player, got", err)
+	err = playerB3.Fund(300)
+	test(t, err == nil, "Expected fund 300 to the player, got", err)
+	err = tournament.Join(playerP2, playerB1, playerB2, playerB3)
+	test(t, err == nil, "Expected join a player, got", err)
+
+	winners := make(map[backer.Player]backer.Points)
+	winners[playerP2] = 2000
+
+	store.errTx = ErrFalseTransaction
+	err = tournament.Result(winners)
+	test(t, err == ErrFalseTransaction, "Expected", ErrFalseTransaction, "got", err)
+	store.errTx = nil
+	store.errFind = ErrFindTournament
+	err = tournament.Result(winners)
+	test(t, err == ErrFindTournament, "Expected", ErrFindTournament, "got", err)
+	store.errFind = nil
+
+	err = tournament.Result(winners)
+	test(t, err == nil, "Expected result of the tournament, got", err)
+
+	balance, err := playerP1.Balance()
+	test(t, err == nil, "Expected check balance of the player, got", err)
+	test(t, balance == 0, "Expected 0 points for the player, got", balance)
+	balance, err = playerP2.Balance()
+	test(t, err == nil, "Expected check balance of the player, got", err)
+	test(t, balance == 750, "Expected 750 points for the player, got", balance)
+	balance, err = playerB1.Balance()
+	test(t, err == nil, "Expected check balance of the player, got", err)
+	test(t, balance == 550, "Expected 550 points for the player, got", balance)
+	balance, err = playerB2.Balance()
+	test(t, err == nil, "Expected check balance of the player, got", err)
+	test(t, balance == 550, "Expected 550 points for the player, got", balance)
+	balance, err = playerB3.Balance()
+	test(t, err == nil, "Expected check balance of the player, got", err)
+	test(t, balance == 550, "Expected 550 points for the player, got", balance)
+
+	err = tournament.Result(winners)
+	test(t, err == ErrAllreadyFinished, "Expected", ErrAllreadyFinished, "got", err)
+
+	tournament, err = New(2, store)
+	test(t, err == nil, "Expected creating a new tournament, got", err)
+	store.errSave = ErrSaveTournament
+	err = tournament.Result(winners)
+	test(t, err == ErrSaveTournament, "Expected", ErrSaveTournament, "got", err)
+	store.errSave = nil
+
+	tournament, err = New(3, store)
+	test(t, err == nil, "Expected creating a new tournament, got", err)
+	store.tx = new(tournamentTxFalse)
+	err = tournament.Result(winners)
+	test(t, err == ErrFalseCommit, "Expected", ErrFalseCommit, "got", err)
+	store.tx = new(tournamentTxSuccess)
+
+	tournament, err = New(4, store)
+	test(t, err == nil, "Expected creating a new tournament, got", err)
+	err = tournament.Announce(1000)
+	test(t, err == nil, "Expected announce of the tournament, got", err)
+	err = playerP2.Fund(250)
+	test(t, err == nil, "Expected fund 1000 to the player, got", err)
+	err = tournament.Join(playerP2)
+	test(t, err == nil, "Expected join a player, got", err)
+	playerStore.errTx = ErrFalseTransaction
+	err = tournament.Result(winners)
+	test(t, err == ErrFalseTransaction, "Expected", ErrFalseTransaction, "got", err)
+	playerStore.errTx = nil
+
+	tournament, err = New(5, store)
+	test(t, err == nil, "Expected creating a new tournament, got", err)
+	err = tournament.Announce(1000)
+	test(t, err == nil, "Expected announce of the tournament, got", err)
+	err = playerP1.Fund(250)
+	test(t, err == nil, "Expected fund 250 to the player, got", err)
+	err = tournament.Join(playerP1, playerB1, playerB2, playerB3)
+	test(t, err == nil, "Expected join players, got", err)
+	winners = make(map[backer.Player]backer.Points)
+	delete(playerStore.records, "b3")
+	winners[playerP1] = 1000
+	err = tournament.Result(winners)
+	test(t, err == ErrNotExist, "Expected", ErrNotExist, "got", err)
+
+	tournament, err = New(6, store)
+	test(t, err == nil, "Expected creating a new tournament, got", err)
+	err = tournament.Announce(1000)
+	test(t, err == nil, "Expected announce of the tournament, got", err)
+	err = playerP1.Fund(400)
+	test(t, err == nil, "Expected fund 250 to the player, got", err)
+	err = tournament.Join(playerP1, playerB1, playerB2)
+	test(t, err == nil, "Expected join players, got", err)
+	err = playerP2.Fund(1000)
+	test(t, err == nil, "Expected fund 1000 to the player, got", err)
+	err = tournament.Join(playerP2)
+	test(t, err == nil, "Expected join players, got", err)
+
+	winners = make(map[backer.Player]backer.Points)
+	winners[playerP1] = 2000
+	err = tournament.Result(winners)
+	test(t, err == nil, "Expected result of the tournament, got", err)
+
+	balance, err = playerP1.Balance()
+	test(t, err == nil, "Expected check balance of the player, got", err)
+	test(t, balance == 983.33, "Expected 983.33 points for the player, got", balance)
+	balance, err = playerB1.Balance()
+	test(t, err == nil, "Expected check balance of the player, got", err)
+	test(t, balance == 883.33, "Expected 883.33 points for the player, got", balance)
+	balance, err = playerB2.Balance()
+	test(t, err == nil, "Expected check balance of the player, got", err)
+	test(t, balance == 883.33, "Expected 883.33 points for the player, got", balance)
 }
