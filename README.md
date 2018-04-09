@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.org/takama/backer.svg?branch=master)](https://travis-ci.org/takama/backer)
 [![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/takama/backer/issues)
 [![Go Report Card](https://goreportcard.com/badge/github.com/takama/backer)](https://goreportcard.com/report/github.com/takama/backer)
+[![codecov](https://codecov.io/gh/takama/backer/branch/master/graph/badge.svg)](https://codecov.io/gh/takama/backer)
 
 Backer service which is allowed players to back each other and get a part the prize in case of a win.
 
