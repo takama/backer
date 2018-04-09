@@ -74,3 +74,50 @@ func (entry *Entry) Announce(deposit backer.Points) error {
 
 	return nil
 }
+
+// Join player and backers into a tournament
+func (entry *Entry) Join(players ...backer.Player) error {
+	tx, err := entry.Controller.Transaction()
+	if err != nil {
+		return err
+	}
+
+	tournament, err := entry.Controller.FindTournament(entry.Tournament.ID, tx)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	var bidder model.Bidder
+	contribute := float32(tournament.Deposit / backer.Points(len(players)))
+	for idx, player := range players {
+		err := player.Take(backer.Points(contribute))
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+		if idx == 0 {
+			bidder.ID = player.ID()
+		} else {
+			bidder.Backers = append(bidder.Backers, player)
+		}
+	}
+	tournament.Bidders = append(tournament.Bidders, bidder)
+
+	err = entry.Controller.SaveTournament(tournament, tx)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	entry.mutex.Lock()
+	defer entry.mutex.Unlock()
+	entry.Tournament.Bidders = tournament.Bidders
+
+	return nil
+}

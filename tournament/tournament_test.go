@@ -7,6 +7,7 @@ import (
 
 	"github.com/takama/backer/db"
 	"github.com/takama/backer/model"
+	"github.com/takama/backer/player"
 )
 
 var (
@@ -89,6 +90,60 @@ func (trn *tournamentBundle) SaveTournament(tournament *model.Tournament, tx db.
 	return trn.errSave
 }
 
+type playerTx struct{}
+
+func (ptx playerTx) Commit() error {
+	return nil
+}
+
+func (ptx playerTx) Rollback() error {
+	return nil
+}
+
+type playerBundle struct {
+	mutex   sync.RWMutex
+	tx      db.Transact
+	errTx   error
+	errNew  error
+	errFind error
+	errSave error
+	records map[string]model.Player
+}
+
+func (pb *playerBundle) Transaction() (db.Transact, error) {
+	pb.tx = new(playerTx)
+	return pb.tx, pb.errTx
+}
+
+func (pb *playerBundle) NewPlayer(ID string, tx db.Transact) error {
+	pb.mutex.RLock()
+	defer pb.mutex.RUnlock()
+	_, ok := pb.records[ID]
+	if ok {
+		return ErrAlreadyExist
+	}
+	pb.records[ID] = model.Player{ID: ID}
+	return pb.errNew
+}
+
+func (pb *playerBundle) FindPlayer(ID string, tx db.Transact) (*model.Player, error) {
+	pb.mutex.RLock()
+	defer pb.mutex.RUnlock()
+	player, ok := pb.records[ID]
+	if !ok {
+		return nil, ErrNotExist
+	}
+	return &player, pb.errFind
+}
+
+func (pb *playerBundle) SavePlayer(player *model.Player, tx db.Transact) error {
+	pb.mutex.Lock()
+	defer pb.mutex.Unlock()
+
+	pb.records[player.ID] = *player
+	return pb.errSave
+}
+
 func TestNewTournament(t *testing.T) {
 
 	store := &tournamentBundle{
@@ -144,4 +199,72 @@ func TestTournamentAnnounce(t *testing.T) {
 	store.errSave = ErrSaveTournament
 	err = tournament.Announce(500)
 	test(t, err == ErrSaveTournament, "Expected", ErrSaveTournament, "got", err)
+}
+
+func TestTournamentJoin(t *testing.T) {
+
+	playerStore := &playerBundle{
+		records: make(map[string]model.Player),
+	}
+	playerP1, err := player.New("p1", playerStore)
+	test(t, err == nil, "Expected creating a new player, got", err)
+
+	store := &tournamentBundle{
+		tx:      new(tournamentTxSuccess),
+		records: make(map[uint64]model.Tournament),
+	}
+	tournament, err := New(1, store)
+	test(t, err == nil, "Expected creating a new tournament, got", err)
+	err = tournament.Announce(1000)
+	test(t, err == nil, "Expected announce of the tournament, got", err)
+
+	err = tournament.Join(playerP1)
+	test(t, err == player.ErrInsufficientPoints, "Expected", player.ErrInsufficientPoints, "got", err)
+	err = playerP1.Fund(1000)
+	test(t, err == nil, "Expected fund 1000 to the player, got", err)
+
+	store.errTx = ErrFalseTransaction
+	err = tournament.Join(playerP1)
+	test(t, err == ErrFalseTransaction, "Expected", ErrFalseTransaction, "got", err)
+	store.errTx = nil
+	store.errFind = ErrFindTournament
+	err = tournament.Join(playerP1)
+	test(t, err == ErrFindTournament, "Expected", ErrFindTournament, "got", err)
+	store.errFind = nil
+	store.errSave = ErrSaveTournament
+	err = tournament.Join(playerP1)
+	test(t, err == ErrSaveTournament, "Expected", ErrSaveTournament, "got", err)
+	err = playerP1.Fund(1000)
+	test(t, err == nil, "Expected fund 1000 to the player, got", err)
+	store.errSave = nil
+	store.tx = new(tournamentTxFalse)
+	err = tournament.Join(playerP1)
+	test(t, err == ErrFalseCommit, "Expected", ErrFalseCommit, "got", err)
+	err = playerP1.Fund(1000)
+	test(t, err == nil, "Expected fund 1000 to the player, got", err)
+	store.tx = new(tournamentTxSuccess)
+
+	err = tournament.Join(playerP1)
+	test(t, err == nil, "Expected join a player, got", err)
+
+	playerP2, err := player.New("p2", playerStore)
+	test(t, err == nil, "Expected creating a new player, got", err)
+	playerB1, err := player.New("b1", playerStore)
+	test(t, err == nil, "Expected creating a new player, got", err)
+	playerB2, err := player.New("b2", playerStore)
+	test(t, err == nil, "Expected creating a new player, got", err)
+	playerB3, err := player.New("b3", playerStore)
+	test(t, err == nil, "Expected creating a new player, got", err)
+	err = tournament.Join(playerP2, playerB1, playerB2, playerB3)
+	test(t, err == player.ErrInsufficientPoints, "Expected", player.ErrInsufficientPoints, "got", err)
+	err = playerP2.Fund(500)
+	test(t, err == nil, "Expected fund 500 to the player, got", err)
+	err = playerB1.Fund(300)
+	test(t, err == nil, "Expected fund 300 to the player, got", err)
+	err = playerB2.Fund(300)
+	test(t, err == nil, "Expected fund 300 to the player, got", err)
+	err = playerB3.Fund(300)
+	test(t, err == nil, "Expected fund 300 to the player, got", err)
+	err = tournament.Join(playerP2, playerB1, playerB2, playerB3)
+	test(t, err == nil, "Expected join a player, got", err)
 }
