@@ -132,3 +132,10 @@ func (entry *Entry) Balance() (backer.Points, error) {
 
 	return player.Balance, nil
 }
+
+// ID returns player ID
+func (entry *Entry) ID() string {
+	entry.mutex.RLock()
+	defer entry.mutex.RUnlock()
+	return entry.Player.ID
+}

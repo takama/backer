@@ -206,3 +206,15 @@ func TestPlayerBalance(t *testing.T) {
 	_, err = entry.Balance()
 	test(t, err == ErrFindPlayer, "Expected", ErrFindPlayer, "got", err)
 }
+
+func TestPlayerID(t *testing.T) {
+
+	store := &playerBundle{
+		tx:      new(playerTxSuccess),
+		records: make(map[string]model.Player),
+	}
+	entry, err := New("p1", store)
+	test(t, err == nil, "Expected creating a new player, got", err)
+	id := entry.ID()
+	test(t, id == entry.Player.ID, "Expected the player id,", entry.Player.ID, " got", id)
+}
