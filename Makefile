@@ -5,7 +5,7 @@
 PROJECT=github.com/takama/backer
 
 # Use the 0.0.0 tag for testing, it shouldn't clobber any release builds
-RELEASE?=0.0.1
+RELEASE?=0.0.2
 
 BUILDTAGS=
 
@@ -17,7 +17,7 @@ fmt:
 	@echo "+ $@"
 	@go list -f '{{if len .TestGoFiles}}"gofmt -s -l {{.Dir}}"{{end}}' ${GO_LIST_FILES} | xargs -L 1 sh -c
 
-lint:
+lint: bootstrap
 	@echo "+ $@"
 	@go list -f '{{if len .TestGoFiles}}"golint -min_confidence=0.85 {{.Dir}}/..."{{end}}' ${GO_LIST_FILES} | xargs -L 1 sh -c
 
@@ -34,4 +34,11 @@ cover:
 	@> coverage.txt
 	@go list -f '{{if len .TestGoFiles}}"go test -coverprofile={{.Dir}}/.coverprofile {{.ImportPath}} && cat {{.Dir}}/.coverprofile  >> coverage.txt"{{end}}' ${GO_LIST_FILES} | xargs -L 1 sh -c
 
-.PHONY: all fmt lint vet test cover
+HAS_LINT := $(shell command -v golint;)
+
+bootstrap:
+ifndef HAS_LINT
+	go get -u github.com/golang/lint/golint
+endif
+
+.PHONY: all fmt lint vet test cover bootstrap
