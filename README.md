@@ -23,6 +23,7 @@ Players
 ```go
 // Player declares players methods
 type Player interface {
+    ID() string
     Fund(amount Points) error
     Take(amount Points) error
     Balance() (Points, error)
