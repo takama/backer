@@ -1,6 +1,6 @@
 # Backer
 
-![Build Status](https://travis-ci.org/takama/backer.svg?branch=master)](https://travis-ci.org/takama/backer)
+[![Build Status](https://travis-ci.org/takama/backer.svg?branch=master)](https://travis-ci.org/takama/backer)
 [![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/takama/backer/issues)
 [![Go Report Card](https://goreportcard.com/badge/github.com/takama/backer)](https://goreportcard.com/report/github.com/takama/backer)
 
