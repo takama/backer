@@ -5,3 +5,7 @@ go:
   - tip
 
 script: make test
+ 
+after_success:
+  - make cover
+  - bash <(curl -s https://codecov.io/bash)
