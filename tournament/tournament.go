@@ -3,6 +3,8 @@ package tournament
 import (
 	"sync"
 
+	"github.com/takama/backer"
+	"github.com/takama/backer/helper"
 	"github.com/takama/backer/model"
 )
 
@@ -39,4 +41,36 @@ func New(id uint64, ctrl Controller) (*Entry, error) {
 	}
 
 	return entry, nil
+}
+
+// Announce tournament with specified deposit
+func (entry *Entry) Announce(deposit backer.Points) error {
+	tx, err := entry.Controller.Transaction()
+	if err != nil {
+		return err
+	}
+
+	tournament, err := entry.Controller.FindTournament(entry.Tournament.ID, tx)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	tournament.Deposit = backer.Points(helper.TruncatePrice(float32(deposit)))
+	err = entry.Controller.SaveTournament(tournament, tx)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	entry.mutex.Lock()
+	defer entry.mutex.Unlock()
+	entry.Tournament.Deposit = tournament.Deposit
+
+	return nil
 }

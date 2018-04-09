@@ -118,3 +118,30 @@ func TestNewTournament(t *testing.T) {
 	_, err = New(4, store)
 	test(t, err == ErrNewTournament, "Expected", ErrNewTournament, "got", err)
 }
+
+func TestTournamentAnnounce(t *testing.T) {
+
+	store := &tournamentBundle{
+		tx:      new(tournamentTxSuccess),
+		records: make(map[uint64]model.Tournament),
+	}
+	tournament, err := New(1, store)
+	test(t, err == nil, "Expected creating a new tournament, got", err)
+	err = tournament.Announce(1000)
+	test(t, err == nil, "Expected announce of the tournament, got", err)
+	store.errTx = ErrFalseTransaction
+	err = tournament.Announce(2000)
+	test(t, err == ErrFalseTransaction, "Expected", ErrFalseTransaction, "got", err)
+	store.tx = new(tournamentTxFalse)
+	store.errTx = nil
+	err = tournament.Announce(3000)
+	test(t, err == ErrFalseCommit, "Expected", ErrFalseCommit, "got", err)
+	store.tx = new(tournamentTxSuccess)
+	store.errFind = ErrFindTournament
+	err = tournament.Announce(300)
+	test(t, err == ErrFindTournament, "Expected", ErrFindTournament, "got", err)
+	store.errFind = nil
+	store.errSave = ErrSaveTournament
+	err = tournament.Announce(500)
+	test(t, err == ErrSaveTournament, "Expected", ErrSaveTournament, "got", err)
+}
