@@ -175,6 +175,37 @@ func TestNewTournament(t *testing.T) {
 	test(t, err == ErrNewTournament, "Expected", ErrNewTournament, "got", err)
 }
 
+func TestFindTournament(t *testing.T) {
+
+	store := &tournamentBundle{
+		tx:      new(tournamentTxSuccess),
+		records: make(map[uint64]model.Tournament),
+	}
+	_, err := Find(1, store)
+	test(t, err != nil, "Expected getting error, got nil")
+
+	tournament, err := New(1, store)
+	test(t, err == nil, "Expected creating a new tournament, got", err)
+	if tournament == nil {
+		t.Fatal("Expected tournament entry, got nil")
+	}
+	test(t, tournament.ID == 1, "Expected tournament id: p1, got", tournament.ID)
+	tournamentExists, err := Find(1, store)
+	test(t, err == nil, "Expected find existing tournament, got", err)
+	if tournamentExists == nil {
+		t.Fatal("Expected tournament entry, got nil")
+	}
+	test(t, tournament.ID == tournamentExists.ID, "Expected the tournaments id's are equal, got", tournamentExists.ID)
+	store.errTx = ErrFalseTransaction
+	_, err = Find(1, store)
+	test(t, err == ErrFalseTransaction, "Expected", ErrFalseTransaction, "got", err)
+	store.tx = new(tournamentTxFalse)
+	store.errTx = nil
+	_, err = Find(1, store)
+	test(t, err == ErrFalseCommit, "Expected", ErrFalseCommit, "got", err)
+	store.errNew = ErrNewTournament
+}
+
 func TestTournamentAnnounce(t *testing.T) {
 
 	store := &tournamentBundle{
