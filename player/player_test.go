@@ -122,6 +122,40 @@ func TestNewPlayer(t *testing.T) {
 	test(t, err == ErrNewPlayer, "Expected", ErrNewPlayer, "got", err)
 }
 
+func TestFindPlayer(t *testing.T) {
+
+	store := &playerBundle{
+		tx:      new(playerTxSuccess),
+		records: make(map[string]model.Player),
+	}
+
+	_, err := Find("p1", store)
+	test(t, err != nil, "Expected getting error, got nil")
+
+	entry, err := New("p1", store)
+	test(t, err == nil, "Expected creating a new player, got", err)
+	if entry == nil {
+		t.Fatal("Expected player entry, got nil")
+	}
+	test(t, entry.Player.ID == "p1", "Expected player id: p1, got", entry.Player.ID)
+	entryExists, err := Find("p1", store)
+	test(t, err == nil, "Expected find existing player, got", err)
+	if entryExists == nil {
+		t.Fatal("Expected player entry, got nil")
+	}
+	test(t, entry.Player.ID == entryExists.Player.ID,
+		"Expected the players id's are equal, got", entryExists.Player.ID)
+	test(t, entry.Player.Balance == entryExists.Player.Balance,
+		"Expected the players balances are equal, got", entryExists.Player.Balance)
+	store.errTx = ErrFalseTransaction
+	_, err = Find("p1", store)
+	test(t, err == ErrFalseTransaction, "Expected", ErrFalseTransaction, "got", err)
+	store.tx = new(playerTxFalse)
+	store.errTx = nil
+	_, err = Find("p1", store)
+	test(t, err == ErrFalseCommit, "Expected", ErrFalseCommit, "got", err)
+}
+
 func TestPlayerFund(t *testing.T) {
 
 	store := &playerBundle{
