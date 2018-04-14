@@ -49,6 +49,30 @@ func New(id string, ctrl Controller) (*Entry, error) {
 	return entry, nil
 }
 
+// Find returns Entry with existing Player
+func Find(id string, ctrl Controller) (*Entry, error) {
+	tx, err := ctrl.Transaction()
+	if err != nil {
+		return nil, err
+	}
+
+	entry := &Entry{Controller: ctrl}
+
+	player, err := ctrl.FindPlayer(id, tx)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	entry.Player = *player
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
+	}
+
+	return entry, nil
+}
+
 // Fund funds (add to balance) player with amount
 func (entry *Entry) Fund(amount backer.Points) error {
 	tx, err := entry.Controller.Transaction()

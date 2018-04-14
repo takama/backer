@@ -49,6 +49,30 @@ func New(id uint64, ctrl Controller) (*Entry, error) {
 	return entry, nil
 }
 
+// Find returns Entry with existing Tournament
+func Find(id uint64, ctrl Controller) (*Entry, error) {
+	tx, err := ctrl.Transaction()
+	if err != nil {
+		return nil, err
+	}
+
+	entry := &Entry{Controller: ctrl}
+
+	tournament, err := ctrl.FindTournament(id, tx)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	entry.Tournament = *tournament
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
+	}
+
+	return entry, nil
+}
+
 // Announce tournament with specified deposit
 func (entry *Entry) Announce(deposit backer.Points) error {
 	tx, err := entry.Controller.Transaction()
