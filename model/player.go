@@ -6,6 +6,6 @@ import (
 
 // Player data model
 type Player struct {
-	ID      string
-	Balance backer.Points
+	ID      string        `json:"id"`
+	Balance backer.Points `json:"balance"`
 }
