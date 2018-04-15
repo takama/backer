@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/takama/backer"
-	"github.com/takama/backer/db"
+	"github.com/takama/backer/datastore"
 	"github.com/takama/backer/helper"
 	"github.com/takama/backer/model"
 )
@@ -17,13 +17,13 @@ var (
 
 // Entry implements Tournament interface
 type Entry struct {
-	db.Controller
+	datastore.Controller
 	mutex sync.RWMutex
 	model.Tournament
 }
 
 // New returns new Entry which implement Tournament interface
-func New(id uint64, ctrl db.Controller) (*Entry, error) {
+func New(id uint64, ctrl datastore.Controller) (*Entry, error) {
 	tx, err := ctrl.Transaction()
 	if err != nil {
 		tx.Rollback()
@@ -52,7 +52,7 @@ func New(id uint64, ctrl db.Controller) (*Entry, error) {
 }
 
 // Find returns Entry with existing Tournament
-func Find(id uint64, ctrl db.Controller) (*Entry, error) {
+func Find(id uint64, ctrl datastore.Controller) (*Entry, error) {
 	tx, err := ctrl.Transaction()
 	if err != nil {
 		tx.Rollback()

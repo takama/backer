@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/takama/backer/db"
+	"github.com/takama/backer/datastore"
 )
 
 var (
@@ -26,7 +26,7 @@ func test(t *testing.T, expected bool, messages ...interface{}) {
 
 func TestNewPlayer(t *testing.T) {
 
-	store := new(db.Stub)
+	store := new(datastore.Stub)
 	store.Reset()
 	entry, err := New("p1", store)
 	test(t, err == nil, "Expected creating a new player, got", err)
@@ -56,7 +56,7 @@ func TestNewPlayer(t *testing.T) {
 
 func TestFindPlayer(t *testing.T) {
 
-	store := new(db.Stub)
+	store := new(datastore.Stub)
 	store.Reset()
 	_, err := Find("p1", store)
 	test(t, err != nil, "Expected getting error, got nil")
@@ -86,7 +86,7 @@ func TestFindPlayer(t *testing.T) {
 
 func TestPlayerFund(t *testing.T) {
 
-	store := new(db.Stub)
+	store := new(datastore.Stub)
 	store.Reset()
 	entry, err := New("p1", store)
 	test(t, err == nil, "Expected creating a new player, got", err)
@@ -111,7 +111,7 @@ func TestPlayerFund(t *testing.T) {
 
 func TestPlayerTake(t *testing.T) {
 
-	store := new(db.Stub)
+	store := new(datastore.Stub)
 	store.Reset()
 	entry, err := New("p3", store)
 	test(t, err == nil, "Expected creating a new player, got", err)
@@ -140,7 +140,7 @@ func TestPlayerTake(t *testing.T) {
 
 func TestPlayerBalance(t *testing.T) {
 
-	store := new(db.Stub)
+	store := new(datastore.Stub)
 	store.Reset()
 	entry, err := New("p4", store)
 	test(t, err == nil, "Expected creating a new player, got", err)
@@ -159,7 +159,7 @@ func TestPlayerBalance(t *testing.T) {
 
 func TestPlayerID(t *testing.T) {
 
-	store := new(db.Stub)
+	store := new(datastore.Stub)
 	store.Reset()
 	entry, err := New("p1", store)
 	test(t, err == nil, "Expected creating a new player, got", err)

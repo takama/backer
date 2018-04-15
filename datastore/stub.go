@@ -1,4 +1,4 @@
-package db
+package datastore
 
 import (
 	"errors"
@@ -10,8 +10,8 @@ import (
 var (
 	// ErrAlreadyExist appears for existing records when try to create new one
 	ErrAlreadyExist = errors.New("Record already exists")
-	// ErrNotFound appears if record does not exist
-	ErrNotFound = errors.New("Record not found")
+	// ErrRecordNotFound appears if record does not exist
+	ErrRecordNotFound = errors.New("Record not found")
 )
 
 // Stub in-memory controller
@@ -143,7 +143,7 @@ func (stub *Stub) FindPlayer(ID string, tx Transact) (*model.Player, error) {
 	defer stub.mutex.RUnlock()
 	player, ok := stub.players[ID]
 	if !ok {
-		return nil, ErrNotFound
+		return nil, ErrRecordNotFound
 	}
 	if len(stub.ErrFind) == 0 {
 		return &player, nil
@@ -204,7 +204,7 @@ func (stub *Stub) FindTournament(ID uint64, tx Transact) (*model.Tournament, err
 	defer stub.mutex.RUnlock()
 	tournament, ok := stub.tournaments[ID]
 	if !ok {
-		return nil, ErrNotFound
+		return nil, ErrRecordNotFound
 	}
 	if len(stub.ErrFind) == 0 {
 		return &tournament, nil
