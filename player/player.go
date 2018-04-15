@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/takama/backer"
+	"github.com/takama/backer/db"
 	"github.com/takama/backer/helper"
 	"github.com/takama/backer/model"
 )
@@ -16,15 +17,16 @@ var (
 
 // Entry implements Player interface
 type Entry struct {
-	Controller
+	db.Controller
 	mutex sync.RWMutex
 	model.Player
 }
 
 // New returns new Entry which implement Player interface
-func New(id string, ctrl Controller) (*Entry, error) {
+func New(id string, ctrl db.Controller) (*Entry, error) {
 	tx, err := ctrl.Transaction()
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
@@ -50,9 +52,10 @@ func New(id string, ctrl Controller) (*Entry, error) {
 }
 
 // Find returns Entry with existing Player
-func Find(id string, ctrl Controller) (*Entry, error) {
+func Find(id string, ctrl db.Controller) (*Entry, error) {
 	tx, err := ctrl.Transaction()
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
@@ -77,6 +80,7 @@ func Find(id string, ctrl Controller) (*Entry, error) {
 func (entry *Entry) Fund(amount backer.Points) error {
 	tx, err := entry.Controller.Transaction()
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 
@@ -110,6 +114,7 @@ func (entry *Entry) Fund(amount backer.Points) error {
 func (entry *Entry) Take(amount backer.Points) error {
 	tx, err := entry.Controller.Transaction()
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 
@@ -120,6 +125,7 @@ func (entry *Entry) Take(amount backer.Points) error {
 	}
 
 	if player.Balance < amount {
+		tx.Rollback()
 		return ErrInsufficientPoints
 	}
 
