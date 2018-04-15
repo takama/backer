@@ -1,4 +1,4 @@
-package db
+package datastore
 
 // Store contains DB store control methods
 type Store interface {

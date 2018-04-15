@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/takama/backer"
-	"github.com/takama/backer/db"
+	"github.com/takama/backer/datastore"
 	"github.com/takama/backer/helper"
 	"github.com/takama/backer/model"
 )
@@ -17,13 +17,13 @@ var (
 
 // Entry implements Player interface
 type Entry struct {
-	db.Controller
+	datastore.Controller
 	mutex sync.RWMutex
 	model.Player
 }
 
 // New returns new Entry which implement Player interface
-func New(id string, ctrl db.Controller) (*Entry, error) {
+func New(id string, ctrl datastore.Controller) (*Entry, error) {
 	tx, err := ctrl.Transaction()
 	if err != nil {
 		tx.Rollback()
@@ -52,7 +52,7 @@ func New(id string, ctrl db.Controller) (*Entry, error) {
 }
 
 // Find returns Entry with existing Player
-func Find(id string, ctrl db.Controller) (*Entry, error) {
+func Find(id string, ctrl datastore.Controller) (*Entry, error) {
 	tx, err := ctrl.Transaction()
 	if err != nil {
 		tx.Rollback()

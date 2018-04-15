@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/takama/backer"
-	"github.com/takama/backer/db"
+	"github.com/takama/backer/datastore"
 	"github.com/takama/backer/player"
 )
 
@@ -26,7 +26,7 @@ func test(t *testing.T, expected bool, messages ...interface{}) {
 
 func TestNewTournament(t *testing.T) {
 
-	store := new(db.Stub)
+	store := new(datastore.Stub)
 	store.Reset()
 	tournament, err := New(1, store)
 	test(t, err == nil, "Expected creating a new tournament, got", err)
@@ -53,7 +53,7 @@ func TestNewTournament(t *testing.T) {
 
 func TestFindTournament(t *testing.T) {
 
-	store := new(db.Stub)
+	store := new(datastore.Stub)
 	store.Reset()
 	_, err := Find(1, store)
 	test(t, err != nil, "Expected getting error, got nil")
@@ -82,7 +82,7 @@ func TestFindTournament(t *testing.T) {
 
 func TestTournamentAnnounce(t *testing.T) {
 
-	store := new(db.Stub)
+	store := new(datastore.Stub)
 	store.Reset()
 	tournament, err := New(1, store)
 	test(t, err == nil, "Expected creating a new tournament, got", err)
@@ -107,7 +107,7 @@ func TestTournamentAnnounce(t *testing.T) {
 
 func TestTournamentJoin(t *testing.T) {
 
-	store := new(db.Stub)
+	store := new(datastore.Stub)
 	store.Reset()
 	playerP1, err := player.New("p1", store)
 	test(t, err == nil, "Expected creating a new player, got", err)
@@ -191,7 +191,7 @@ func TestTournamentJoin(t *testing.T) {
 
 func TestTournamentResult(t *testing.T) {
 
-	store := new(db.Stub)
+	store := new(datastore.Stub)
 	store.Reset()
 	playerP1, err := player.New("p1", store)
 	test(t, err == nil, "Expected creating a new player, got", err)
@@ -299,10 +299,10 @@ func TestTournamentResult(t *testing.T) {
 	err = tournament.Join(playerP1, playerB1, playerB2, playerB3)
 	test(t, err == nil, "Expected join players, got", err)
 	winners = make(map[backer.Player]backer.Points)
-	store.ErrFind = append(store.ErrFind, db.ErrNotFound, nil)
+	store.ErrFind = append(store.ErrFind, datastore.ErrRecordNotFound, nil)
 	winners[playerP1] = 1000
 	err = tournament.Result(winners)
-	test(t, err == db.ErrNotFound, "Expected", db.ErrNotFound, "got", err)
+	test(t, err == datastore.ErrRecordNotFound, "Expected", datastore.ErrRecordNotFound, "got", err)
 	balance, err = playerP1.Balance()
 	test(t, err == nil, "Expected check balance of the player, got", err)
 	test(t, balance == 0, "Expected 0 points for the player, got", balance)
@@ -313,10 +313,10 @@ func TestTournamentResult(t *testing.T) {
 	test(t, err == nil, "Expected check balance of the player, got", err)
 	test(t, balance == 300, "Expected 300 points for the player, got", balance)
 
-	store.ErrFind = append(store.ErrFind, db.ErrNotFound, nil, nil)
+	store.ErrFind = append(store.ErrFind, datastore.ErrRecordNotFound, nil, nil)
 	winners[playerP1] = 1000
 	err = tournament.Result(winners)
-	test(t, err == db.ErrNotFound, "Expected", db.ErrNotFound, "got", err)
+	test(t, err == datastore.ErrRecordNotFound, "Expected", datastore.ErrRecordNotFound, "got", err)
 
 	tournament, err = New(6, store)
 	test(t, err == nil, "Expected creating a new tournament, got", err)
