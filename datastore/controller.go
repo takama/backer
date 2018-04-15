@@ -1,4 +1,4 @@
-package db
+package datastore
 
 import (
 	"github.com/takama/backer/model"

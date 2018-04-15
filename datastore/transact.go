@@ -1,4 +1,4 @@
-package db
+package datastore
 
 // Transact contains transaction control methods
 type Transact interface {
