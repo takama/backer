@@ -5,7 +5,7 @@
 PROJECT=github.com/takama/backer
 
 # Use the 0.0.0 tag for testing, it shouldn't clobber any release builds
-RELEASE?=v0.2.0
+RELEASE?=v0.2.1
 
 BUILDTAGS=
 
