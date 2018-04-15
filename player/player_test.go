@@ -2,11 +2,9 @@ package player
 
 import (
 	"errors"
-	"sync"
 	"testing"
 
 	"github.com/takama/backer/db"
-	"github.com/takama/backer/model"
 )
 
 var (
@@ -26,75 +24,10 @@ func test(t *testing.T, expected bool, messages ...interface{}) {
 	}
 }
 
-type playerTxSuccess struct{}
-
-func (ptx playerTxSuccess) Commit() error {
-	return nil
-}
-
-func (ptx playerTxSuccess) Rollback() error {
-	return nil
-}
-
-type playerTxFalse struct{}
-
-func (ptx playerTxFalse) Commit() error {
-	return ErrFalseCommit
-}
-
-func (ptx playerTxFalse) Rollback() error {
-	return ErrFalseRollback
-}
-
-type playerBundle struct {
-	mutex   sync.RWMutex
-	tx      db.Transact
-	errTx   error
-	errNew  error
-	errFind error
-	errSave error
-	records map[string]model.Player
-}
-
-func (pb *playerBundle) Transaction() (db.Transact, error) {
-	return pb.tx, pb.errTx
-}
-
-func (pb *playerBundle) NewPlayer(ID string, tx db.Transact) error {
-	pb.mutex.RLock()
-	defer pb.mutex.RUnlock()
-	_, ok := pb.records[ID]
-	if ok {
-		return ErrAlreadyExist
-	}
-	pb.records[ID] = model.Player{ID: ID}
-	return pb.errNew
-}
-
-func (pb *playerBundle) FindPlayer(ID string, tx db.Transact) (*model.Player, error) {
-	pb.mutex.RLock()
-	defer pb.mutex.RUnlock()
-	player, ok := pb.records[ID]
-	if !ok {
-		return nil, ErrNotExist
-	}
-	return &player, pb.errFind
-}
-
-func (pb *playerBundle) SavePlayer(player *model.Player, tx db.Transact) error {
-	pb.mutex.Lock()
-	defer pb.mutex.Unlock()
-
-	pb.records[player.ID] = *player
-	return pb.errSave
-}
-
 func TestNewPlayer(t *testing.T) {
 
-	store := &playerBundle{
-		tx:      new(playerTxSuccess),
-		records: make(map[string]model.Player),
-	}
+	store := new(db.Stub)
+	store.Reset()
 	entry, err := New("p1", store)
 	test(t, err == nil, "Expected creating a new player, got", err)
 	if entry == nil {
@@ -110,25 +43,21 @@ func TestNewPlayer(t *testing.T) {
 		"Expected the players id's are equal, got", entryExists.Player.ID)
 	test(t, entry.Player.Balance == entryExists.Player.Balance,
 		"Expected the players balances are equal, got", entryExists.Player.Balance)
-	store.errTx = ErrFalseTransaction
+	store.ErrTx = append(store.ErrTx, ErrFalseTransaction)
 	_, err = New("p2", store)
 	test(t, err == ErrFalseTransaction, "Expected", ErrFalseTransaction, "got", err)
-	store.tx = new(playerTxFalse)
-	store.errTx = nil
+	store.ErrTxCmt = append(store.ErrTxCmt, ErrFalseCommit)
 	_, err = New("p3", store)
 	test(t, err == ErrFalseCommit, "Expected", ErrFalseCommit, "got", err)
-	store.errNew = ErrNewPlayer
+	store.ErrNew = append(store.ErrNew, ErrNewPlayer)
 	_, err = New("p4", store)
 	test(t, err == ErrNewPlayer, "Expected", ErrNewPlayer, "got", err)
 }
 
 func TestFindPlayer(t *testing.T) {
 
-	store := &playerBundle{
-		tx:      new(playerTxSuccess),
-		records: make(map[string]model.Player),
-	}
-
+	store := new(db.Stub)
+	store.Reset()
 	_, err := Find("p1", store)
 	test(t, err != nil, "Expected getting error, got nil")
 
@@ -147,21 +76,18 @@ func TestFindPlayer(t *testing.T) {
 		"Expected the players id's are equal, got", entryExists.Player.ID)
 	test(t, entry.Player.Balance == entryExists.Player.Balance,
 		"Expected the players balances are equal, got", entryExists.Player.Balance)
-	store.errTx = ErrFalseTransaction
+	store.ErrTx = append(store.ErrTx, ErrFalseTransaction)
 	_, err = Find("p1", store)
 	test(t, err == ErrFalseTransaction, "Expected", ErrFalseTransaction, "got", err)
-	store.tx = new(playerTxFalse)
-	store.errTx = nil
+	store.ErrTxCmt = append(store.ErrTxCmt, ErrFalseCommit)
 	_, err = Find("p1", store)
 	test(t, err == ErrFalseCommit, "Expected", ErrFalseCommit, "got", err)
 }
 
 func TestPlayerFund(t *testing.T) {
 
-	store := &playerBundle{
-		tx:      new(playerTxSuccess),
-		records: make(map[string]model.Player),
-	}
+	store := new(db.Stub)
+	store.Reset()
 	entry, err := New("p1", store)
 	test(t, err == nil, "Expected creating a new player, got", err)
 	err = entry.Fund(300)
@@ -169,29 +95,24 @@ func TestPlayerFund(t *testing.T) {
 	points, err := entry.Balance()
 	test(t, err == nil, "Expected check balance of the player, got", err)
 	test(t, points == 300, "Expected 300 points for the player, got", points)
-	store.errTx = ErrFalseTransaction
+	store.ErrTx = append(store.ErrTx, ErrFalseTransaction)
 	err = entry.Fund(10)
 	test(t, err == ErrFalseTransaction, "Expected", ErrFalseTransaction, "got", err)
-	store.tx = new(playerTxFalse)
-	store.errTx = nil
+	store.ErrTxCmt = append(store.ErrTxCmt, ErrFalseCommit)
 	err = entry.Fund(20)
 	test(t, err == ErrFalseCommit, "Expected", ErrFalseCommit, "got", err)
-	store.tx = new(playerTxSuccess)
-	store.errFind = ErrFindPlayer
+	store.ErrFind = append(store.ErrFind, ErrFindPlayer)
 	err = entry.Fund(30)
 	test(t, err == ErrFindPlayer, "Expected", ErrFindPlayer, "got", err)
-	store.errFind = nil
-	store.errSave = ErrSavePlayer
+	store.ErrSave = append(store.ErrSave, ErrSavePlayer)
 	err = entry.Fund(40)
 	test(t, err == ErrSavePlayer, "Expected", ErrSavePlayer, "got", err)
 }
 
 func TestPlayerTake(t *testing.T) {
 
-	store := &playerBundle{
-		tx:      new(playerTxSuccess),
-		records: make(map[string]model.Player),
-	}
+	store := new(db.Stub)
+	store.Reset()
 	entry, err := New("p3", store)
 	test(t, err == nil, "Expected creating a new player, got", err)
 	err = entry.Fund(300)
@@ -203,29 +124,24 @@ func TestPlayerTake(t *testing.T) {
 	balance, err := entry.Balance()
 	test(t, err == nil, "Expected check balance of the player, got", err)
 	test(t, balance == 100, "Expected 100 points for the player, got", balance)
-	store.errTx = ErrFalseTransaction
+	store.ErrTx = append(store.ErrTx, ErrFalseTransaction)
 	err = entry.Take(10)
 	test(t, err == ErrFalseTransaction, "Expected", ErrFalseTransaction, "got", err)
-	store.tx = new(playerTxFalse)
-	store.errTx = nil
+	store.ErrTxCmt = append(store.ErrTxCmt, ErrFalseCommit)
 	err = entry.Take(20)
 	test(t, err == ErrFalseCommit, "Expected", ErrFalseCommit, "got", err)
-	store.tx = new(playerTxSuccess)
-	store.errFind = ErrFindPlayer
+	store.ErrFind = append(store.ErrFind, ErrFindPlayer)
 	err = entry.Take(30)
 	test(t, err == ErrFindPlayer, "Expected", ErrFindPlayer, "got", err)
-	store.errFind = nil
-	store.errSave = ErrSavePlayer
+	store.ErrSave = append(store.ErrSave, ErrSavePlayer)
 	err = entry.Take(40)
 	test(t, err == ErrSavePlayer, "Expected", ErrSavePlayer, "got", err)
 }
 
 func TestPlayerBalance(t *testing.T) {
 
-	store := &playerBundle{
-		tx:      new(playerTxSuccess),
-		records: make(map[string]model.Player),
-	}
+	store := new(db.Stub)
+	store.Reset()
 	entry, err := New("p4", store)
 	test(t, err == nil, "Expected creating a new player, got", err)
 	balance, err := entry.Balance()
@@ -236,17 +152,15 @@ func TestPlayerBalance(t *testing.T) {
 	balance, err = entry.Balance()
 	test(t, err == nil, "Expected check balance of the player, got", err)
 	test(t, balance == 50.99, "Expected 300 points for the player, got", balance)
-	store.errFind = ErrFindPlayer
+	store.ErrFind = append(store.ErrFind, ErrFindPlayer)
 	_, err = entry.Balance()
 	test(t, err == ErrFindPlayer, "Expected", ErrFindPlayer, "got", err)
 }
 
 func TestPlayerID(t *testing.T) {
 
-	store := &playerBundle{
-		tx:      new(playerTxSuccess),
-		records: make(map[string]model.Player),
-	}
+	store := new(db.Stub)
+	store.Reset()
 	entry, err := New("p1", store)
 	test(t, err == nil, "Expected creating a new player, got", err)
 	id := entry.ID()

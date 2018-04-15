@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/takama/backer"
+	"github.com/takama/backer/db"
 	"github.com/takama/backer/helper"
 	"github.com/takama/backer/model"
 )
@@ -16,15 +17,16 @@ var (
 
 // Entry implements Tournament interface
 type Entry struct {
-	Controller
+	db.Controller
 	mutex sync.RWMutex
 	model.Tournament
 }
 
 // New returns new Entry which implement Tournament interface
-func New(id uint64, ctrl Controller) (*Entry, error) {
+func New(id uint64, ctrl db.Controller) (*Entry, error) {
 	tx, err := ctrl.Transaction()
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
@@ -50,9 +52,10 @@ func New(id uint64, ctrl Controller) (*Entry, error) {
 }
 
 // Find returns Entry with existing Tournament
-func Find(id uint64, ctrl Controller) (*Entry, error) {
+func Find(id uint64, ctrl db.Controller) (*Entry, error) {
 	tx, err := ctrl.Transaction()
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
@@ -77,6 +80,7 @@ func Find(id uint64, ctrl Controller) (*Entry, error) {
 func (entry *Entry) Announce(deposit backer.Points) error {
 	tx, err := entry.Controller.Transaction()
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 
@@ -113,6 +117,7 @@ func (entry *Entry) Announce(deposit backer.Points) error {
 func (entry *Entry) Join(players ...backer.Player) error {
 	tx, err := entry.Controller.Transaction()
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 
@@ -123,6 +128,7 @@ func (entry *Entry) Join(players ...backer.Player) error {
 	}
 
 	if tournament.IsFinished {
+		tx.Rollback()
 		return ErrAllreadyFinished
 	}
 
@@ -164,6 +170,7 @@ func (entry *Entry) Join(players ...backer.Player) error {
 func (entry *Entry) Result(winners map[backer.Player]backer.Points) error {
 	tx, err := entry.Controller.Transaction()
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 
@@ -174,6 +181,7 @@ func (entry *Entry) Result(winners map[backer.Player]backer.Points) error {
 	}
 
 	if tournament.IsFinished {
+		tx.Rollback()
 		return ErrAllreadyFinished
 	}
 
