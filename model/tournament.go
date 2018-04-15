@@ -6,16 +6,16 @@ import (
 
 // Tournament data model
 type Tournament struct {
-	ID         uint64
-	Deposit    backer.Points
-	IsFinished bool
-	Bidders    []Bidder
+	ID         uint64        `json:"id"`
+	Deposit    backer.Points `json:"deposit"`
+	IsFinished bool          `json:"is_finished"`
+	Bidders    []Bidder      `json:"bidders"`
 }
 
 // Bidder data model
 type Bidder struct {
-	ID      string
-	Winner  bool
-	Prize   backer.Points
-	Backers []backer.Player
+	ID      string          `json:"id"`
+	Winner  bool            `json:"winner"`
+	Prize   backer.Points   `json:"prize"`
+	Backers []backer.Player `json:"backers"`
 }
