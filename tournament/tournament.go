@@ -15,6 +15,8 @@ var (
 	ErrAllreadyFinished = errors.New("Tournament already finished")
 	// ErrPlayersAlreadyJoined appears if the tournament was already announced and players already joined
 	ErrPlayersAlreadyJoined = errors.New("Could not re-announce the Tournament, players already joined")
+	// ErrCouldNotJoinTwice appears if the same player try to join to the tournament twice
+	ErrCouldNotJoinTwice = errors.New("Could not join twice to the same tournament")
 )
 
 // Entry implements Tournament interface
@@ -147,6 +149,12 @@ func (entry *Entry) Join(players ...backer.Player) error {
 			return err
 		}
 		if idx == 0 {
+			for _, b := range tournament.Bidders {
+				if b.ID == player.ID() {
+					tx.Rollback()
+					return ErrCouldNotJoinTwice
+				}
+			}
 			bidder.ID = player.ID()
 		} else {
 			bidder.Backers = append(bidder.Backers, player)
