@@ -11,8 +11,10 @@ import (
 )
 
 var (
-	// ErrAllreadyFinished appears if tournament was already finished
+	// ErrAllreadyFinished appears if the tournament was already finished
 	ErrAllreadyFinished = errors.New("Tournament already finished")
+	// ErrPlayersAlreadyJoined appears if the tournament was already announced and players already joined
+	ErrPlayersAlreadyJoined = errors.New("Could not re-announce the Tournament, players already joined")
 )
 
 // Entry implements Tournament interface
@@ -92,6 +94,10 @@ func (entry *Entry) Announce(deposit backer.Points) error {
 
 	if tournament.IsFinished {
 		return ErrAllreadyFinished
+	}
+
+	if len(tournament.Bidders) > 0 {
+		return ErrPlayersAlreadyJoined
 	}
 
 	tournament.Deposit = backer.Points(helper.TruncatePrice(float32(deposit)))
