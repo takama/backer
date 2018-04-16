@@ -166,6 +166,17 @@ func TestTournamentJoin(t *testing.T) {
 	test(t, balance == 1000, "Expected 1000 points for the player, got", balance)
 
 	err = tournament.Join(playerP1)
+	test(t, err == ErrCouldNotJoinTwice, "Expected", ErrCouldNotJoinTwice, "got", err)
+	balance, err = playerP1.Balance()
+	test(t, err == nil, "Expected check balance of the player, got", err)
+	test(t, balance == 1000, "Expected 1000 points for the player, got", balance)
+
+	tournament, err = New(2, store)
+	test(t, err == nil, "Expected creating a new tournament, got", err)
+	err = tournament.Announce(1000)
+	test(t, err == nil, "Expected announce of the tournament, got", err)
+
+	err = tournament.Join(playerP1)
 	test(t, err == nil, "Expected join a player, got", err)
 	balance, err = playerP1.Balance()
 	test(t, err == nil, "Expected check balance of the player, got", err)
