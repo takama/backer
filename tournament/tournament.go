@@ -8,6 +8,7 @@ import (
 	"github.com/takama/backer/datastore"
 	"github.com/takama/backer/helper"
 	"github.com/takama/backer/model"
+	"github.com/takama/backer/player"
 )
 
 var (
@@ -142,22 +143,22 @@ func (entry *Entry) Join(players ...backer.Player) error {
 
 	var bidder model.Bidder
 	contribute := float32(tournament.Deposit / backer.Points(len(players)))
-	for idx, player := range players {
-		err := player.Take(backer.Points(contribute))
+	for idx, participant := range players {
+		err := participant.Take(backer.Points(contribute))
 		if err != nil {
 			tx.Rollback()
 			return err
 		}
 		if idx == 0 {
-			for _, b := range tournament.Bidders {
-				if b.ID == player.ID() {
+			for _, member := range tournament.Bidders {
+				if member.ID == participant.ID() {
 					tx.Rollback()
 					return ErrCouldNotJoinTwice
 				}
 			}
-			bidder.ID = player.ID()
+			bidder.ID = participant.ID()
 		} else {
-			bidder.Backers = append(bidder.Backers, player)
+			bidder.Backers = append(bidder.Backers, participant.ID())
 		}
 	}
 	tournament.Bidders = append(tournament.Bidders, bidder)
@@ -202,18 +203,23 @@ func (entry *Entry) Result(winners map[backer.Player]backer.Points) error {
 	entry.mutex.Lock()
 	defer entry.mutex.Unlock()
 
-	for player, points := range winners {
+	for winner, points := range winners {
 		for idx, bidder := range tournament.Bidders {
-			if bidder.ID == player.ID() {
+			if bidder.ID == winner.ID() {
 				tournament.Bidders[idx].Winner = true
 				prize := float32(points / backer.Points(len(bidder.Backers)+1))
-				err := player.Fund(backer.Points(prize))
+				err := winner.Fund(backer.Points(prize))
 				if err != nil {
 					tx.Rollback()
 					return err
 				}
 				for _, p := range bidder.Backers {
-					err := p.Fund(backer.Points(prize))
+					b, err := player.Find(p, entry.Controller)
+					if err != nil {
+						tx.Rollback()
+						return err
+					}
+					err = b.Fund(backer.Points(prize))
 					if err != nil {
 						tx.Rollback()
 						return err

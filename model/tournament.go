@@ -14,8 +14,8 @@ type Tournament struct {
 
 // Bidder data model
 type Bidder struct {
-	ID      string          `json:"id"`
-	Winner  bool            `json:"winner"`
-	Prize   backer.Points   `json:"prize"`
-	Backers []backer.Player `json:"backers"`
+	ID      string        `json:"id"`
+	Winner  bool          `json:"winner"`
+	Prize   backer.Points `json:"prize"`
+	Backers []string      `json:"backers"`
 }
