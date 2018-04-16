@@ -338,6 +338,20 @@ func TestTournamentResult(t *testing.T) {
 	winners[playerP1] = 1000
 	err = tournament.Result(winners)
 	test(t, err == datastore.ErrRecordNotFound, "Expected", datastore.ErrRecordNotFound, "got", err)
+	balance, err = playerP1.Balance()
+	test(t, err == nil, "Expected check balance of the player, got", err)
+	test(t, balance == 0, "Expected 0 points for the player, got", balance)
+	balance, err = playerB1.Balance()
+	test(t, err == nil, "Expected check balance of the player, got", err)
+	test(t, balance == 300, "Expected 300 points for the player, got", balance)
+	balance, err = playerB2.Balance()
+	test(t, err == nil, "Expected check balance of the player, got", err)
+	test(t, balance == 300, "Expected 300 points for the player, got", balance)
+
+	store.ErrFind = append(store.ErrFind, datastore.ErrRecordNotFound, nil, nil, nil)
+	winners[playerP1] = 1000
+	err = tournament.Result(winners)
+	test(t, err == datastore.ErrRecordNotFound, "Expected", datastore.ErrRecordNotFound, "got", err)
 
 	tournament, err = New(6, store)
 	test(t, err == nil, "Expected creating a new tournament, got", err)
