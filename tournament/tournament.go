@@ -19,8 +19,8 @@ var (
 
 // Entry implements Tournament interface
 type Entry struct {
-	datastore.Controller
-	mutex sync.RWMutex
+	datastore.Controller `json:"-"`
+	mutex                sync.RWMutex
 	model.Tournament
 }
 
