@@ -207,6 +207,7 @@ func (entry *Entry) Result(winners map[backer.Player]backer.Points) error {
 		for idx, bidder := range tournament.Bidders {
 			if bidder.ID == winner.ID() {
 				tournament.Bidders[idx].Winner = true
+				tournament.Bidders[idx].Prize = points
 				prize := float32(points / backer.Points(len(bidder.Backers)+1))
 				err := winner.Fund(backer.Points(prize))
 				if err != nil {
@@ -243,6 +244,7 @@ func (entry *Entry) Result(winners map[backer.Player]backer.Points) error {
 	}
 
 	entry.Tournament.IsFinished = tournament.IsFinished
+	entry.Tournament.Bidders = tournament.Bidders
 
 	return nil
 }
