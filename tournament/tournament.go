@@ -18,7 +18,7 @@ var (
 	ErrPlayersAlreadyJoined = errors.New("Could not re-announce the Tournament, players already joined")
 	// ErrCouldNotJoinTwice appears if the same player try to join to the tournament twice
 	ErrCouldNotJoinTwice = errors.New("Could not join twice to the same tournament")
-	// ErrWinnerIsNotMember appears if among winners exist player who not a tournament member as player
+	// ErrWinnerIsNotMember appears if among winners exists a player who not a tournament member as a player
 	ErrWinnerIsNotMember = errors.New("Not a tournament player can not be a winner")
 )
 
