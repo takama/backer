@@ -190,7 +190,7 @@ func (stub *Stub) NewTournament(ID uint64, tx Transact) error {
 	if ok {
 		return ErrAlreadyExist
 	}
-	stub.tournaments[ID] = model.Tournament{ID: ID}
+	stub.tournaments[ID] = model.Tournament{ID: ID, Bidders: make([]model.Bidder, 0)}
 	if len(stub.ErrNew) == 0 {
 		return nil
 	}
