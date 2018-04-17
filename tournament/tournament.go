@@ -146,8 +146,8 @@ func (entry *Entry) Join(players ...backer.Player) error {
 	var bidder model.Bidder
 	contribute := float32(tournament.Deposit / backer.Points(len(players)))
 	for idx, participant := range players {
-		err := participant.Take(backer.Points(contribute))
-		if err != nil {
+		if _, err := player.ManagePoints(entry.Controller, tx,
+			participant.ID(), backer.Points(-contribute)); err != nil {
 			tx.Rollback()
 			return err
 		}
@@ -211,19 +211,14 @@ func (entry *Entry) Result(winners map[backer.Player]backer.Points) error {
 				tournament.Bidders[idx].Winner = true
 				tournament.Bidders[idx].Prize = points
 				prize := float32(points / backer.Points(len(bidder.Backers)+1))
-				err := winner.Fund(backer.Points(prize))
-				if err != nil {
+				if _, err := player.ManagePoints(entry.Controller, tx,
+					winner.ID(), backer.Points(prize)); err != nil {
 					tx.Rollback()
 					return err
 				}
-				for _, p := range bidder.Backers {
-					b, err := player.Find(p, entry.Controller)
-					if err != nil {
-						tx.Rollback()
-						return err
-					}
-					err = b.Fund(backer.Points(prize))
-					if err != nil {
+				for _, id := range bidder.Backers {
+					if _, err := player.ManagePoints(entry.Controller, tx,
+						id, backer.Points(prize)); err != nil {
 						tx.Rollback()
 						return err
 					}

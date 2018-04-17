@@ -2,6 +2,7 @@ package player
 
 import (
 	"errors"
+	"math"
 	"sync"
 
 	"github.com/takama/backer"
@@ -84,15 +85,7 @@ func (entry *Entry) Fund(amount backer.Points) error {
 		return err
 	}
 
-	player, err := entry.Controller.FindPlayer(entry.Player.ID, tx)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	player.Balance = backer.Points(
-		helper.RoundPrice(float32(player.Balance) + helper.TruncatePrice(float32(amount))))
-	err = entry.Controller.SavePlayer(player, tx)
+	balance, err := ManagePoints(entry.Controller, tx, entry.Player.ID, amount)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -105,7 +98,7 @@ func (entry *Entry) Fund(amount backer.Points) error {
 
 	entry.mutex.Lock()
 	defer entry.mutex.Unlock()
-	entry.Player.Balance = player.Balance
+	entry.Player.Balance = balance
 
 	return nil
 }
@@ -118,20 +111,7 @@ func (entry *Entry) Take(amount backer.Points) error {
 		return err
 	}
 
-	player, err := entry.Controller.FindPlayer(entry.Player.ID, tx)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	if player.Balance < amount {
-		tx.Rollback()
-		return ErrInsufficientPoints
-	}
-
-	player.Balance = backer.Points(
-		helper.RoundPrice(float32(player.Balance) - helper.TruncatePrice(float32(amount))))
-	err = entry.Controller.SavePlayer(player, tx)
+	balance, err := ManagePoints(entry.Controller, tx, entry.Player.ID, -amount)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -144,7 +124,7 @@ func (entry *Entry) Take(amount backer.Points) error {
 
 	entry.mutex.Lock()
 	defer entry.mutex.Unlock()
-	entry.Player.Balance = player.Balance
+	entry.Player.Balance = balance
 
 	return nil
 }
@@ -168,4 +148,25 @@ func (entry *Entry) ID() string {
 	entry.mutex.RLock()
 	defer entry.mutex.RUnlock()
 	return entry.Player.ID
+}
+
+// ManagePoints manage player balance with amount using external transaction
+func ManagePoints(ctrl datastore.Controller, tx datastore.Transact,
+	id string, amount backer.Points) (backer.Points, error) {
+	player, err := ctrl.FindPlayer(id, tx)
+	if err != nil {
+		return 0, err
+	}
+	if amount < 0 && player.Balance < backer.Points(math.Abs(float64(amount))) {
+		return 0, ErrInsufficientPoints
+	}
+
+	player.Balance = backer.Points(
+		helper.RoundPrice(float32(player.Balance) + helper.TruncatePrice(float32(amount))))
+	err = ctrl.SavePlayer(player, tx)
+	if err != nil {
+		return 0, err
+	}
+
+	return player.Balance, nil
 }
