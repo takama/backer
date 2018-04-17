@@ -46,7 +46,7 @@ func New(id uint64, ctrl datastore.Controller) (*Entry, error) {
 			tx.Rollback()
 			return nil, err
 		}
-		tournament = &model.Tournament{ID: id}
+		tournament = &model.Tournament{ID: id, Bidders: make([]model.Bidder, 0)}
 	}
 	entry.Tournament = *tournament
 
@@ -120,6 +120,7 @@ func (entry *Entry) Announce(deposit backer.Points) error {
 	entry.mutex.Lock()
 	defer entry.mutex.Unlock()
 	entry.Tournament.Deposit = tournament.Deposit
+	entry.Tournament.Bidders = tournament.Bidders
 
 	return nil
 }
