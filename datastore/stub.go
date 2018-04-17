@@ -18,7 +18,7 @@ var (
 type Stub struct {
 	mutex       sync.RWMutex
 	tx          Transact
-	transacts   []transactData
+	transact    transactData
 	ErrReset    []error
 	ErrMigUp    []error
 	ErrMigDn    []error
@@ -70,16 +70,15 @@ func (stub *Stub) MigrateDown() error {
 // Transaction returns DB transaction control
 func (stub *Stub) Transaction() (Transact, error) {
 	var err error
-	stub.transacts = append(stub.transacts, transactData{})
 	stub.mutex.RLock()
 	defer stub.mutex.RUnlock()
-	stub.transacts[len(stub.transacts)-1].players = make(map[string]model.Player)
-	stub.transacts[len(stub.transacts)-1].tournaments = make(map[uint64]model.Tournament)
+	stub.transact.players = make(map[string]model.Player)
+	stub.transact.tournaments = make(map[uint64]model.Tournament)
 	for idx, val := range stub.players {
-		stub.transacts[len(stub.transacts)-1].players[idx] = val
+		stub.transact.players[idx] = val
 	}
 	for idx, val := range stub.tournaments {
-		stub.transacts[len(stub.transacts)-1].tournaments[idx] = val
+		stub.transact.tournaments[idx] = val
 	}
 	if len(stub.ErrTx) == 0 {
 		return stub.tx, nil
@@ -91,7 +90,8 @@ func (stub *Stub) Transaction() (Transact, error) {
 // Commit confirms all changes during a transaction
 func (stub *Stub) Commit() error {
 	var err error
-	stub.transacts = stub.transacts[:len(stub.transacts)-1]
+	stub.transact.players = make(map[string]model.Player)
+	stub.transact.tournaments = make(map[uint64]model.Tournament)
 	if len(stub.ErrTxCmt) == 0 {
 		return nil
 	}
@@ -105,13 +105,14 @@ func (stub *Stub) Rollback() error {
 	stub.mutex.RLock()
 	defer stub.mutex.RUnlock()
 	stub.Reset()
-	for idx, val := range stub.transacts[len(stub.transacts)-1].players {
+	for idx, val := range stub.transact.players {
 		stub.players[idx] = val
 	}
-	for idx, val := range stub.transacts[len(stub.transacts)-1].tournaments {
+	for idx, val := range stub.transact.tournaments {
 		stub.tournaments[idx] = val
 	}
-	stub.transacts = stub.transacts[:len(stub.transacts)-1]
+	stub.transact.players = make(map[string]model.Player)
+	stub.transact.tournaments = make(map[uint64]model.Tournament)
 	if len(stub.ErrTxRbk) == 0 {
 		return nil
 	}
