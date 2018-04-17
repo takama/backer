@@ -153,7 +153,7 @@ func TestTournamentJoin(t *testing.T) {
 	balance, err = playerP1.Balance()
 	test(t, err == nil, "Expected check balance of the player, got", err)
 	test(t, balance == 1000, "Expected 1000 points for the player, got", balance)
-	store.ErrTxCmt = append(store.ErrTxCmt, ErrFalseCommit, nil)
+	store.ErrTxCmt = append(store.ErrTxCmt, ErrFalseCommit)
 	err = tournament.Join(playerP1)
 	test(t, err == ErrFalseCommit, "Expected", ErrFalseCommit, "got", err)
 	balance, err = playerP1.Balance()
