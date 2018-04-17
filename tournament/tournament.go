@@ -18,6 +18,8 @@ var (
 	ErrPlayersAlreadyJoined = errors.New("Could not re-announce the Tournament, players already joined")
 	// ErrCouldNotJoinTwice appears if the same player try to join to the tournament twice
 	ErrCouldNotJoinTwice = errors.New("Could not join twice to the same tournament")
+	// ErrWinnerIsNotMember appears if among winners exist player who not a tournament member as player
+	ErrWinnerIsNotMember = errors.New("Not a tournament player can not be a winner")
 )
 
 // Entry implements Tournament interface
@@ -207,6 +209,7 @@ func (entry *Entry) Result(winners map[backer.Player]backer.Points) error {
 		for idx, bidder := range tournament.Bidders {
 			if bidder.ID == winner.ID() {
 				tournament.Bidders[idx].Winner = true
+				tournament.Bidders[idx].Prize = points
 				prize := float32(points / backer.Points(len(bidder.Backers)+1))
 				err := winner.Fund(backer.Points(prize))
 				if err != nil {
@@ -225,10 +228,15 @@ func (entry *Entry) Result(winners map[backer.Player]backer.Points) error {
 						return err
 					}
 				}
+				delete(winners, winner)
 			}
 		}
 	}
 
+	if len(winners) != 0 {
+		tx.Rollback()
+		return ErrWinnerIsNotMember
+	}
 	tournament.IsFinished = true
 
 	err = entry.Controller.SaveTournament(tournament, tx)
@@ -243,6 +251,7 @@ func (entry *Entry) Result(winners map[backer.Player]backer.Points) error {
 	}
 
 	entry.Tournament.IsFinished = tournament.IsFinished
+	entry.Tournament.Bidders = tournament.Bidders
 
 	return nil
 }
