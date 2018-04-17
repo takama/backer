@@ -382,6 +382,14 @@ func TestTournamentResult(t *testing.T) {
 	err = tournament.Join(playerP2)
 	test(t, err == nil, "Expected join players, got", err)
 
+	playerP3, err := player.New("p3", store)
+	test(t, err == nil, "Expected creating a new player, got", err)
+	winners = make(map[backer.Player]backer.Points)
+	winners[playerP1] = 1000
+	winners[playerP3] = 1000
+	err = tournament.Result(winners)
+	test(t, err == ErrWinnerIsNotMember, "Expected", ErrWinnerIsNotMember, "got", err)
+
 	winners = make(map[backer.Player]backer.Points)
 	winners[playerP1] = 2000
 	err = tournament.Result(winners)
