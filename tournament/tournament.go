@@ -145,6 +145,7 @@ func (entry *Entry) Join(players ...backer.Player) error {
 	}
 
 	var bidder model.Bidder
+	bidder.Backers = make([]string, 0)
 	contribute := float32(tournament.Deposit / backer.Points(len(players)))
 	for idx, participant := range players {
 		if _, err := player.ManagePoints(entry.Controller, tx,
